@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     default-mysql-client \
+    nodejs \
+    npm \
     && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -18,6 +20,8 @@ WORKDIR /var/www
 COPY . .
 
 RUN composer install --no-interaction --prefer-dist
+RUN npm install
+RUN npm run build
 
 EXPOSE 8000
 
