@@ -273,23 +273,78 @@ class AnalyticsDashboardSource
         ];
     }
 
-    private static function normalizeGrade(string $grade): string
+    private static function normalizeGrade(mixed $grade): string
     {
-        if (preg_match('/(\d+)/', $grade, $matches) === 1) {
+        $value = self::asciiUpper($grade);
+
+        if ($value === 'ALL') {
+            return 'all';
+        }
+
+        if (preg_match('/(\d+)/', $value, $matches) === 1) {
             return $matches[1];
         }
 
-        return strtolower(trim($grade));
+        $gradeWords = [
+            'PRIMER' => '1',
+            'PRIMERO' => '1',
+            'SEGUNDO' => '2',
+            'TERCER' => '3',
+            'TERCERO' => '3',
+            'CUARTO' => '4',
+            'QUINTO' => '5',
+            'SEXTO' => '6',
+        ];
+
+        foreach ($gradeWords as $label => $canonical) {
+            if (str_contains($value, $label)) {
+                return $canonical;
+            }
+        }
+
+        return mb_strtolower($value);
     }
 
-    private static function normalizeSection(string $section): string
+    private static function normalizeSection(mixed $section): string
     {
-        return strtoupper(trim($section));
+        $value = self::asciiUpper($section);
+
+        if ($value === 'ALL') {
+            return 'all';
+        }
+
+        if (preg_match('/^SECCION\s*([A-Z])$/', $value, $matches) === 1) {
+            return $matches[1];
+        }
+
+        if (preg_match('/\b([A-Z])\b/', $value, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return $value;
     }
 
-    private static function normalizeCourse(string $course): string
+    private static function normalizeCourse(mixed $course): string
     {
-        return strtolower(trim($course));
+        $value = self::asciiUpper($course);
+
+        if ($value === 'ALL') {
+            return 'all';
+        }
+
+        $courses = [
+            'LECTURA' => 'lectura',
+            'ESCRITURA' => 'escritura',
+            'MATEMATICA' => 'matematica',
+        ];
+
+        foreach ($courses as $label => $canonical) {
+            if (str_contains($value, $label)) {
+                return $canonical;
+            }
+        }
+
+        return mb_strtolower($value);
     }
 
     private static function normalizeLevel(mixed $level): ?string
@@ -397,4 +452,3 @@ class AnalyticsDashboardSource
         return implode('|', [$grade, $section, $course]);
     }
 }
-

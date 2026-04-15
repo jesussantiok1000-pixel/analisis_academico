@@ -94,7 +94,80 @@ const syncFilterState = (app, select) => {
     }
 };
 
-const buildHeatmapKey = (selection) => `${selection.grade}|${selection.section}|${selection.course}`;
+const normalizeFilterText = (value) => String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+const normalizeGrade = (value) => {
+    const text = normalizeFilterText(value).toLowerCase();
+
+    if (text === 'all') {
+        return 'all';
+    }
+
+    const numericGrade = text.match(/\d+/);
+
+    if (numericGrade) {
+        return numericGrade[0];
+    }
+
+    const gradeWords = {
+        primer: '1',
+        primero: '1',
+        segundo: '2',
+        tercer: '3',
+        tercero: '3',
+        cuarto: '4',
+        quinto: '5',
+        sexto: '6',
+    };
+
+    const match = Object.entries(gradeWords).find(([label]) => text.includes(label));
+
+    return match ? match[1] : text;
+};
+
+const normalizeSection = (value) => {
+    const text = normalizeFilterText(value).toUpperCase();
+
+    if (text === 'ALL') {
+        return 'all';
+    }
+
+    const prefixedSection = text.match(/^SECCION\s*([A-Z])$/);
+    const standaloneSection = text.match(/\b([A-Z])\b/);
+
+    return prefixedSection?.[1] ?? standaloneSection?.[1] ?? text;
+};
+
+const normalizeCourse = (value) => {
+    const text = normalizeFilterText(value).toLowerCase();
+
+    if (text === 'all') {
+        return 'all';
+    }
+
+    if (text.includes('lectura')) {
+        return 'lectura';
+    }
+
+    if (text.includes('escritura')) {
+        return 'escritura';
+    }
+
+    if (text.includes('matematica')) {
+        return 'matematica';
+    }
+
+    return text;
+};
+
+const buildDatasetKey = (selection) => [
+    normalizeGrade(selection.grade),
+    normalizeSection(selection.section),
+    normalizeCourse(selection.course),
+].join('|');
 
 const getFilterSelection = (app) => {
     const read = (key) => {
@@ -246,8 +319,8 @@ const wireDashboard = () => {
         return;
     }
 
-    const resolveMetrics = (selection) => metricDatasets[buildHeatmapKey(selection)] ?? emptyMetricDataset;
-    const resolveAnalytics = (selection) => analyticsDatasets[buildHeatmapKey(selection)] ?? emptyAnalyticsDataset;
+    const resolveMetrics = (selection) => metricDatasets[buildDatasetKey(selection)] ?? emptyMetricDataset;
+    const resolveAnalytics = (selection) => analyticsDatasets[buildDatasetKey(selection)] ?? emptyAnalyticsDataset;
 
     const updateMetrics = (selection) => {
         const metrics = resolveMetrics(selection);
@@ -339,7 +412,7 @@ const wireDashboard = () => {
 
         const selection = getFilterSelection(app);
         const selectionLabel = `${selection.gradeLabel} / ${selection.sectionLabel} / ${selection.courseLabel}`;
-        const dataset = heatmapDatasets[buildHeatmapKey(selection)];
+        const dataset = heatmapDatasets[buildDatasetKey(selection)];
 
         if (heatmapSelection) {
             heatmapSelection.textContent = selectionLabel;
